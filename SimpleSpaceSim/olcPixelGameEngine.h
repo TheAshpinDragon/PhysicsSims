@@ -291,7 +291,7 @@
 
 #pragma region hello_world_example
 // O------------------------------------------------------------------------------O
-// | Example "Hello World" Program (main.cpp)                                     |
+// | SpaceSim "Hello World" Program (main.cpp)                                     |
 // O------------------------------------------------------------------------------O
 /*
 
@@ -299,13 +299,13 @@
 #include "olcPixelGameEngine.h"
 
 // Override base class with your custom functionality
-class Example : public olc::PixelGameEngine
+class SpaceSim : public olc::PixelGameEngine
 {
 public:
-	Example()
+	SpaceSim()
 	{
 		// Name your application
-		sAppName = "Example";
+		sAppName = "SpaceSim";
 	}
 
 public:
@@ -327,7 +327,7 @@ public:
 
 int main()
 {
-	Example demo;
+	SpaceSim demo;
 	if (demo.Construct(256, 240, 4, 4))
 		demo.Start();
 	return 0;
@@ -643,6 +643,13 @@ namespace olc
 		bool operator == (const v2d_generic& rhs) const { return (this->x == rhs.x && this->y == rhs.y); }
 		bool operator != (const v2d_generic& rhs) const { return (this->x != rhs.x || this->y != rhs.y); }
 		const std::string str() const { return std::string("(") + std::to_string(this->x) + "," + std::to_string(this->y) + ")"; }
+		const std::string strCut(int cut) const
+		{
+			return
+				std::string("(")
+				+ (this->x > 0 ? std::string(" ") : std::string("")) + std::to_string(this->x).substr(0, cut + (this->x > 0 ? 0 : 1)) + ","
+				+ (this->y > 0 ? std::string(" ") : std::string("")) + std::to_string(this->y).substr(0, cut + (this->y > 0 ? 0 : 1)) + ")";
+		}
 		friend std::ostream& operator << (std::ostream& os, const v2d_generic& rhs) { os << rhs.str(); return os; }
 		operator v2d_generic<int32_t>() const { return { static_cast<int32_t>(this->x), static_cast<int32_t>(this->y) }; }
 		operator v2d_generic<float>() const { return { static_cast<float>(this->x), static_cast<float>(this->y) }; }
