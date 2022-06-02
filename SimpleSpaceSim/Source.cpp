@@ -95,19 +95,24 @@ public:
 		{
 			olc::vd2d dist = obj.getPos() - pos;
 			double radius = dist.mag();
-			double angle = MATH::atan2(dist.y, dist.x);
+			//double angle = MATH::atan2(dist.y, dist.x);
 
-			double accMag = -G * (mass / (radius * radius));
+			//double accMag = -G * (mass / (radius * radius));
 
-			olc::vd2d out = olc::vd2d{ accMag * cos(angle), accMag * sin(angle) };
+			//olc::vd2d out = olc::vd2d{ accMag * cos(angle), accMag * sin(angle) };
 
-			if(false)
+			/*if(false)
 			std::cout << "PointObj: getAttraction"	<< "\n"
 					  << "   dist:   " << dist		<< "\n"
 					  << "   radius: " << radius	<< "\n"
 					  << "   angle:  " << angle		<< "\n"
 					  << "   accMag: " << accMag	<< "\n"
-					  << "   out   : " << out		<< "\n\n";
+					  << "   out   : " << out		<< "\n\n";*/
+
+			double accX = -(G * mass) * ((dist.x) / (radius * radius * radius));
+			double accY = -(G * mass) * ((dist.y) / (radius * radius * radius));
+
+			olc::vd2d out = olc::vd2d{accX, accY};
 
 			return out;
 		}
@@ -135,7 +140,7 @@ public:
 	bool OnUserCreate() override // 405400 * 1000
 	{
 		objs.push_back(new PointObject("Earth", { 0, 0 }	   , { 0, 0 }	 , 6370, bignum(5.97, 22), olc::BLUE));
-		objs.push_back(new PointObject("Moon ", { 25480, 0 }, { 0, 12000 }, 1738, bignum(7.34, 20), olc::GREY)); // Apogee = 405400km, Perigee = 362600km
+		objs.push_back(new PointObject("Moon ", { 25480, 0 }, { 0, 12504.91 }, 1738, bignum(7.34, 20), olc::GREY)); // Apogee = 405400km, Perigee = 362600km
 
 
 		return true;
@@ -170,9 +175,9 @@ public:
 			obj->drawSelf(this, camOffset, 0.002);
 		}
 
-		DrawStringDecal({ 0,0 }, objs[0]->getInfo(), olc::WHITE, { 0.25f, 1 });
-		DrawStringDecal({ 0,8 }, objs[1]->getInfo(), olc::WHITE, { 0.25f, 1 });
-		DrawStringDecal({ 0,16 }, ("System momentum: " + std::to_string(objs[0]->getMomentum() + objs[1]->getMomentum())), olc::WHITE, { 0.25f, 1 });
+		//DrawStringDecal({ 0,0 }, objs[0]->getInfo(), olc::WHITE, { 0.25f, 1 });
+		//DrawStringDecal({ 0,8 }, objs[1]->getInfo(), olc::WHITE, { 0.25f, 1 });
+		//DrawStringDecal({ 0,16 }, ("System momentum: " + std::to_string(objs[0]->getMomentum() + objs[1]->getMomentum())), olc::WHITE, { 0.25f, 1 });
 
 		return true;
 	}
@@ -181,7 +186,7 @@ public:
 int main()
 {
 	SpaceSim sim;
-	if (sim.Construct(SCREEN_SIZE.x, SCREEN_SIZE.y, 4, 4, false, true))
+	if (sim.Construct(SCREEN_SIZE.x, SCREEN_SIZE.y, 4, 4, false, false))
 		sim.Start();
 	return 0;
 }
