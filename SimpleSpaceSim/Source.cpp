@@ -2,15 +2,13 @@
 #include "olcPixelGameEngine.h"
 
 #define SCREEN_SIZE olc::vi2d{ 256, 240 }
-#define TWO_PI		6.2831853072
-#define PI			3.1415926535
-#define HALF_PI 	1.5707963268
-#define MASS_SCALE	(1000 * 1000 * 1000 * 1000 * 1000 * 1000 * 1000 * 1000 * 1000)
-#define G			0.0000000000667428
-#define G_ADJ		6.67428
+#define TWO_PI		(double)6.2831853071795865
+#define PI			(double)3.1415926535897932
+#define HALF_PI 	(double)1.5707963267948966
+#define G			(double)0.0000000000667428
 
 namespace MATH {
-	float atanf2(float y, float x)
+	double atan2(double y, double x)
 	{
 		if (x == 0.0f)
 		{
@@ -20,7 +18,7 @@ namespace MATH {
 
 		if(y == 0.0f) return x > 0.0f ? 0 : PI;
 
-		float out = atanf(y / x);
+		double out = atan(y / x);
 
 		if (x < 0.0f) out += PI;
 		if (y < 0.0f && x > 0.0f) out += TWO_PI;
@@ -43,24 +41,26 @@ public:
 
 	class PointObject {
 		std::string name;
-		olc::vf2d pos, vel, acc;
-		float mass;
+		olc::vd2d pos, vel, acc;
+		double radius, mass;
+		olc::Pixel color;
 
 	public:
-		PointObject(std::string objName, olc::vf2d position, olc::vf2d initVelocity, float objMass) : name{ objName }, pos { position }, vel{ initVelocity }, mass{ objMass } {}
+		PointObject(std::string objName, olc::vd2d position, olc::vd2d initVelocity, double objRadius, double objMass, olc::Pixel objColor = olc::WHITE)
+			: name{ objName }, pos{ position }, vel{ initVelocity }, radius{ objRadius }, mass{ objMass }, color{ objColor } {}
 
 		// Draws the point according to the mass it has
-		void drawSelf(olc::PixelGameEngine *pge)
+		void drawSelf(olc::PixelGameEngine *pge, olc::vi2d offset, double scale = 1.0f)
 		{
-			pge->FillCircle((olc::vi2d)pos + SCREEN_SIZE / 2, (int32_t)round(mass / 100));
+			pge->FillCircle(((olc::vi2d)(pos * scale) + SCREEN_SIZE / 2) + offset, (int32_t)round(radius * scale), color);
 		}
 
 		// Modifies velocity and position according to a given acceleration
-		void updatePos(float deltaTime, olc::vf2d newAcc)
+		void updatePos(float deltaTime, olc::vd2d newAcc)
 		{
 			//std::cout << "New pos: " << (pos + (vel) * (deltaTime)+(0.5f) * (newAcc) * (deltaTime * deltaTime)) << std::endl;
 
-			pos = pos + (vel) * (deltaTime) + (0.5f) * (newAcc) * (deltaTime * deltaTime);
+			pos = pos + (vel) * (double)(deltaTime) + (0.5f) * (newAcc) * ((double)deltaTime * (double)deltaTime);
 			vel = vel + (newAcc) * (deltaTime);
 			acc = newAcc;
 		}
@@ -71,30 +71,35 @@ public:
 			
 		}
 
-		olc::vf2d getPos()
+		olc::vd2d getPos()
 		{
 			return pos;
 		}
 
-		float getMass()
+		double getMass()
 		{
 			return mass;
 		}
 
-		olc::vi2d getVel()
+		olc::vd2d getVel()
 		{
 			return vel;
 		}
 
-		olc::vf2d getAttraction(PointObject& obj)
+		double getMomentum() 
 		{
-			olc::vf2d dist = obj.getPos() - pos;
-			float radius = sqrtf((dist.x * dist.x) + (dist.y * dist.y));
-			float angle = MATH::atanf2(dist.y, dist.x);
+			return vel.mag() * mass;
+		}
 
-			double accMag = -(double)G_ADJ * (mass / (radius * radius)) * 100;
+		olc::vd2d getAttraction(PointObject& obj)
+		{
+			olc::vd2d dist = obj.getPos() - pos;
+			double radius = dist.mag();
+			double angle = MATH::atan2(dist.y, dist.x);
 
-			olc::vf2d out = olc::vf2d{ (float)accMag * cos(angle), (float)accMag * sin(angle) };
+			double accMag = -G * (mass / (radius * radius));
+
+			olc::vd2d out = olc::vd2d{ accMag * cos(angle), accMag * sin(angle) };
 
 			if(false)
 			std::cout << "PointObj: getAttraction"	<< "\n"
@@ -113,18 +118,24 @@ public:
 				to_upper(name) + " | "
 				"{PO} | "
 				"M: " + std::to_string(mass).substr(0, 4) + "(kg) | "
-				"P: " + vel.strCut(5) + "(m) | "
+				"P: " + pos.strCut(9) + "(m) | "
 				"V: " + vel.strCut(5) + "(m/s) | "
-				"A: " + acc.strCut(5) + "(m/s^2) |";
+				"A: " + acc.strCut(8) + "(m/s^2) |";
 		}
 	};
 
 	std::vector<PointObject*> objs;
+	olc::vi2d camOffset;
 
-	bool OnUserCreate() override
+	double bignum(double base, int power)
 	{
-		objs.push_back(new PointObject("Earth", { -40,0 }, { 0,40 }, 500.0f));
-		objs.push_back(new PointObject("The Moon", { 40,0 }, { 0,-40 }, 500.0f));
+		return base * pow(10.0, power);
+	}
+
+	bool OnUserCreate() override // 405400 * 1000
+	{
+		objs.push_back(new PointObject("Earth", { 0, 0 }	   , { 0, 0 }	 , 6370, bignum(5.97, 22), olc::BLUE));
+		objs.push_back(new PointObject("Moon ", { 25480, 0 }, { 0, 12000 }, 1738, bignum(7.34, 20), olc::GREY)); // Apogee = 405400km, Perigee = 362600km
 
 
 		return true;
@@ -132,22 +143,36 @@ public:
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
-		Clear(olc::BLACK);
+		//Clear(olc::BLACK);
+
+
+		if (GetKey(olc::UP).bHeld)
+			camOffset.y += 1;
+		else if (GetKey(olc::DOWN).bHeld)
+			camOffset.y -= 1;
+
+		if (GetKey(olc::RIGHT).bHeld)
+			camOffset.x -= 1;
+		else if (GetKey(olc::LEFT).bHeld)
+			camOffset.x += 1;
 
 		for (auto *obj : objs)
 		{
-			olc::vf2d totalAcc = { 0, 0 };
+			olc::vd2d totalAcc = { 0, 0 };
 			
 			for (auto *o : objs) { if(o != obj) totalAcc += o->getAttraction(*obj); }
 
-			//std::cout << "Acc: " << totalAcc << " vel: " << obj->getVel() << std::endl;
+			std::cout << "Acc: " << totalAcc << " vel: " << obj->getVel() << std::endl;
 
-			obj->updatePos(fElapsedTime, totalAcc);
+			if(obj == objs[1])
+				obj->updatePos(fElapsedTime, totalAcc);
 
-			obj->drawSelf(this);
+			obj->drawSelf(this, camOffset, 0.002);
 		}
 
-		DrawStringDecal({ 0,0 }, objs[0]->getInfo(), olc::WHITE, {0.25f, 1});
+		DrawStringDecal({ 0,0 }, objs[0]->getInfo(), olc::WHITE, { 0.25f, 1 });
+		DrawStringDecal({ 0,8 }, objs[1]->getInfo(), olc::WHITE, { 0.25f, 1 });
+		DrawStringDecal({ 0,16 }, ("System momentum: " + std::to_string(objs[0]->getMomentum() + objs[1]->getMomentum())), olc::WHITE, { 0.25f, 1 });
 
 		return true;
 	}
