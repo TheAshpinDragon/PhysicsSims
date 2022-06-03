@@ -622,6 +622,7 @@ namespace olc
 		v2d_generic  ceil() const { return v2d_generic(std::ceil(x), std::ceil(y)); }
 		v2d_generic  max(const v2d_generic& v) const { return v2d_generic(std::max(x, v.x), std::max(y, v.y)); }
 		v2d_generic  min(const v2d_generic& v) const { return v2d_generic(std::min(x, v.x), std::min(y, v.y)); }
+		v2d_generic  abs(const v2d_generic& v) const { return v2d_generic(std::abs(x, v.x), std::abs(y, v.y)); }
 		v2d_generic  cart() { return { std::cos(y) * x, std::sin(y) * x }; }
 		v2d_generic  polar() { return { mag(), std::atan2(y, x) }; }
 		T dot(const v2d_generic& rhs) const { return this->x * rhs.x + this->y * rhs.y; }
@@ -642,12 +643,12 @@ namespace olc
 		v2d_generic  operator -  () const { return { -x, -y }; }
 		bool operator == (const v2d_generic& rhs) const { return (this->x == rhs.x && this->y == rhs.y); }
 		bool operator != (const v2d_generic& rhs) const { return (this->x != rhs.x || this->y != rhs.y); }
-		const std::string str() const { return std::string("(") + std::to_string(this->x) + "," + std::to_string(this->y) + ")"; }
+		const std::string str() const { return std::string("(") + std::to_string(this->x) + ", " + std::to_string(this->y) + ")"; }
 		const std::string strCut(int cut) const
 		{
 			return
 				std::string("(")
-				+ (this->x > 0 ? std::string(" ") : std::string("")) + std::to_string(this->x).substr(0, cut + (this->x > 0 ? 0 : 1)) + ","
+				+ (this->x > 0 ? std::string(" ") : std::string("")) + std::to_string(this->x).substr(0, cut + (this->x > 0 ? 0 : 1)) + ", "
 				+ (this->y > 0 ? std::string(" ") : std::string("")) + std::to_string(this->y).substr(0, cut + (this->y > 0 ? 0 : 1)) + ")";
 		}
 		friend std::ostream& operator << (std::ostream& os, const v2d_generic& rhs) { os << rhs.str(); return os; }
