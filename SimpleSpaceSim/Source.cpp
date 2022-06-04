@@ -81,10 +81,11 @@ public:
 		ObjPosInfo buff;
 		double radius, mass;
 		olc::Pixel color;
+		bool calculate;
 
 	public:
-		PointObject(std::string objName, olc::vd2d position, olc::vd2d initVelocity, double objRadius, double objMass, olc::Pixel objColor = olc::WHITE)
-			: name{ objName }, pos{ position }, vel{ initVelocity }, buff{ this }, radius{ objRadius }, mass{ objMass }, color{ objColor } {}
+		PointObject(std::string objName, olc::vd2d position, olc::vd2d initVelocity, double objRadius, double objMass, olc::Pixel objColor = olc::WHITE, bool active = true)
+			: name{ objName }, pos{ position }, vel{ initVelocity }, buff{ this }, radius{ objRadius }, mass{ objMass }, color{ objColor }, calculate{active} {}
 
 		// Draws the point according to the mass it has
 		void drawSelf(olc::PixelGameEngine *pge, olc::vi2d offset, double scale = 1.0f)
@@ -104,15 +105,15 @@ public:
 		void update(double deltaTime, ObjPosInfo& target)
 		{
 			// x = x0 + vt + (0.5)at^2 + (0.2)jt^3
-			target.pos +=
-				(target.vel * (deltaTime)) +
-				(0.5 * target.acc * (deltaTime * deltaTime));// + 
-				//(0.2 * target.jerk * (deltaTime * deltaTime * deltaTime));
+			target.pos += 
+				(target.vel * (deltaTime)) + 
+				(0.5 * target.acc * (deltaTime * deltaTime)) + 
+				(0.2 * target.jerk * (deltaTime * deltaTime * deltaTime));
 
 			// v = v0 + at + (0.5)jt^2
 			target.vel += 
-				(target.acc * (deltaTime));// + 
-				//(0.5 * target.jerk * (deltaTime * deltaTime));
+				(target.acc * (deltaTime)) + 
+				(0.5 * target.jerk * (deltaTime * deltaTime));
 
 			// a = a0 + jt
 			target.acc += (target.jerk * (deltaTime));
@@ -149,6 +150,8 @@ public:
 
 		void calcAttraction(float deltaTime, std::vector<PointObject*>& objs)
 		{
+			if (!calculate) return;
+
 			olc::vd2d instAcc = getInstantAttraction(objs);
 
 			// Update buffer
@@ -210,9 +213,9 @@ public:
 		return COMv;
 	}
 
-	double calcRadius(PointObject* obj, olc::vd2d systemCOM)
+	double calcRadius(PointObject* obj, olc::vd2d pos)
 	{
-		return (systemCOM - obj->getPos()).mag();
+		return (pos - obj->getPos()).mag();
 	}
 
 	double calcOrbitUg(std::vector<PointObject*>& system, olc::vd2d systemCOM)
@@ -245,23 +248,57 @@ public:
 		return 0.5 * totalMass * systemCOMVelocity.mag() * systemCOMVelocity.mag();
 	}
 
-	void setOrbitalSpeed(PointObject* parent, PointObject* satallite) // , double eccentricity = 0
+	void setOrbitalSpeed(PointObject* parent, std::vector<PointObject*>& system) // , double eccentricity = 0
 	{
-		std::vector<PointObject*> system = {parent, satallite};
 		olc::vd2d COM = calcCOM(system);
-		double r = (parent->getPos() - satallite->getPos()).mag();
-		double vel = sqrt((G * satallite->getMass() * calcRadius(parent, COM)) / (r * r));
-		parent->setVel({0, vel});
-		satallite->setVel(-(parent->getVel() * parent->getMass()) / satallite->getMass());
+		double	Rp = calcRadius(parent, COM),
+				Rnp = 0,
+				Rn = 0,
+				Fgp = 0;
+		
+		std::cout << "COM: " << COM << "\nParent radius: " << Rp << " | ";
 
-		std::cout << "COM: " << COM <<
+		for (auto* obj : system)
+		{
+			if (obj == parent) continue;
+			Rnp = calcRadius(obj, parent->getPos());
+			std::cout << obj->getName() << " radius: " << Rnp << " & ";
+			Fgp += (G * obj->getMass()) / (Rnp * Rnp);
+			std::cout << " Fgn: " << (G * obj->getMass()) / (Rnp * Rnp) << " | ";
+		}
+		
+		double	Vp = sqrt(Rp * Fgp),
+				Vn = 0,
+				Mp = parent->getMass(),
+				Pp = Mp * Vp;
+		
+		std::cout << "\nTotal Fg on parent: " << Fgp << "\nParent velocity: " << olc::vd2d{0, -Vp};
+
+		for (auto* obj : system)
+		{
+			if (obj == parent) continue;
+			Rnp = calcRadius(obj, parent->getPos());
+			Rn = calcRadius(obj, COM);
+			Vn = sqrt((G * Mp * Rn) / (Rnp * Rnp));
+			obj->setVel(olc::vd2d{ 0, Vn });
+			std::cout << obj->getName() << " velocity: " << obj->getVel() << " | ";
+		}
+		std::cout << std::endl;
+		parent->setVel({0,-Vp});
+
+		//double r = (parent->getPos() - satallite->getPos()).mag();
+		//double vel = sqrt((G * satallite->getMass() * calcRadius(parent, COM)) / (r * r));
+		//parent->setVel({0, vel});
+		//satallite->setVel(-(parent->getVel() * parent->getMass()) / satallite->getMass());
+
+		/*std::cout << "COM: " << COM <<
 			" total radius: " << r << " parent radius: " << calcRadius(parent, COM) << " satallite radius: " << calcRadius(satallite, COM) <<
-			" parent vel: " << parent->getVel() << " satallite vel: " << satallite->getVel() << "\n";
+			" parent vel: " << parent->getVel() << " satallite vel: " << satallite->getVel() << "\n";*/
 	}
 
 	std::vector<PointObject*> objs;
 	olc::vi2d camOffset;
-	float zoom = 0.008;
+	float zoom = 0.0005;
 	double initMomentum, initKe, initUg;
 
 	bool OnUserCreate() override // 405400 * 1000
@@ -269,10 +306,15 @@ public:
 		//objs.push_back(new PointObject("Earth1", { 12740, 0 }, {}, 6370, bignum(5.97, 22), olc::BLUE));
 		//objs.push_back(new PointObject("Earth2", { -12740, 0 }, {}, 6370, bignum(5.97, 22), olc::GREY));
 
-		objs.push_back(new PointObject("Earth", { 0, 0 }, {}, 6370, bignum(5.97, 22), olc::BLUE));
-		objs.push_back(new PointObject("Moon ", { 25480, 0 }, {}, 1738, bignum(7.34, 20), olc::GREY)); // Apogee = 405400km, Perigee = 362600km
+		//objs.push_back(new PointObject("Earth", { 0, 0 }, {}, 6370, bignum(5.97, 22), olc::BLUE));
+		//objs.push_back(new PointObject("Moon ", { 25480, 0 }, {}, 1738, bignum(7.34, 20), olc::GREY)); // Apogee = 405400km, Perigee = 362600km
 
-		setOrbitalSpeed(objs[0], objs[1]);
+		objs.push_back(new PointObject("Earth ", { 0, 0 }, {0, -288.0846}, 6370, bignum(5.97, 22), olc::BLUE));
+		//objs.push_back(new PointObject("Earth2", { 25480, 0 }, {}, 6370, bignum(5.97, 22), olc::BLUE));
+		objs.push_back(new PointObject("Moon1 ", { 25480.0 * 2, 0 }, {0, 8462.9707}, 1738, bignum(7.34, 20), olc::GREY)); // Apogee = 405400km, Perigee = 362600km
+		objs.push_back(new PointObject("Moon2 ", { 25480.0 * 12, 0 }, {0, 3584.5741}, 1738, bignum(7.34, 20), olc::GREY)); // Apogee = 405400km, Perigee = 362600km
+
+		//setOrbitalSpeed(objs[0], objs);
 
 		for (auto* obj : objs)
 			obj->initAttraction(objs);
@@ -294,7 +336,7 @@ public:
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
-		Clear(olc::BLACK);
+		//Clear(olc::BLACK);
 
 		if (GetKey(olc::UP).bHeld)
 			camOffset.y += 1;
@@ -306,7 +348,7 @@ public:
 		else if (GetKey(olc::LEFT).bHeld)
 			camOffset.x += 1;
 
-		fElapsedTime *= 1;
+		fElapsedTime *= 100;
 
 		for (int i = (int)ceilf(fElapsedTime / TICK); i > 0; i--)
 		{
@@ -320,9 +362,14 @@ public:
 				totalKe = 0,
 				totalUg = 0;
 
+
+		for (auto* obj : objs)
+			obj->setToBuff();
+
+		camOffset = -calcCOM(objs) * zoom;
+
 		for (auto* obj : objs)
 		{
-			obj->setToBuff();
 			obj->drawSelf(this, camOffset, zoom);
 			totalMomentum += obj->getMomentum();
 		}
@@ -334,6 +381,8 @@ public:
 				R2 = calcRadius(objs[1], COM);
 
 		FillCircle(((COM * zoom) + camOffset + SCREEN_SIZE / 2), 1, olc::YELLOW);
+		//DrawCircle(((COM * zoom) + camOffset + SCREEN_SIZE / 2), (25480 * 2 * zoom));
+		//DrawCircle(((COM * zoom) + camOffset + SCREEN_SIZE / 2), (25480 * 12 * zoom));
 
 		totalUg = calcOrbitUg(objs, COM);
 		totalKe = calcVelocityKe(objs) + calcCOMKe(objs, COMv);//(G * objs[0]->getMass() * objs[1]->getMass()) / (25480.0 * 2.0);
