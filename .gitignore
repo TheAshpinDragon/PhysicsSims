@@ -105,7 +105,7 @@ ipch/
 *.obj
 *.tlog
 *.lastbuildstate
-SimpleSpaceSim/[Rr]elease/
+SimpleSpaceSim/*
 
 # Visual Studio profiler
 *.psess
