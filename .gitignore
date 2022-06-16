@@ -103,7 +103,8 @@ ipch/
 # Visual C++ release files
 *.pdp
 *.obj
-*.tlog/
+*.tlog
+*.lastbuildstate
 
 
 # Visual Studio profiler
