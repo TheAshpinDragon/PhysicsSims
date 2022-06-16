@@ -727,7 +727,6 @@ public:
 		for (auto* obj : objs)
 			obj->setToBuff();
 
-		//camOffset = -calcCOM(objs) * zoom;
 		if(followCenterObj)
 			camOffset = -objs[0]->getPos() * zoom;
 

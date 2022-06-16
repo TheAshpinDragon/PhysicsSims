@@ -103,9 +103,8 @@ ipch/
 # Visual C++ release files
 #*.pdp
 #*.obj
-#*.tlog
+*.tlog
 #*.lastbuildstate
-**/SimpleSpaceSim/
 
 # Visual Studio profiler
 *.psess
