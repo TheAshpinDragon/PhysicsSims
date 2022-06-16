@@ -101,11 +101,11 @@ ipch/
 *.VC.VC.opendb
 
 # Visual C++ release files
-*.pdp
-*.obj
-*.tlog
-*.lastbuildstate
-SimpleSpaceSim/*
+#*.pdp
+#*.obj
+#*.tlog
+#*.lastbuildstate
+SimpleSpaceSim/
 
 # Visual Studio profiler
 *.psess
