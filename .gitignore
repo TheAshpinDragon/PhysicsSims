@@ -18,6 +18,10 @@ TranslationalPhysics.h
 *.userprefs
 
 # Build results
+[Rr]elease/
+!/[Rr]elease/
+!/[Rr]elease/*
+[Rr]eleases/
 [Dd]ebug/
 [Dd]ebugPublic/
 x64/
@@ -103,12 +107,6 @@ ipch/
 *.cachefile
 *.VC.db
 *.VC.VC.opendb
-
-# Visual C++ release files
-#*.pdp
-#*.obj
-*.tlog
-#*.lastbuildstate
 
 # Visual Studio profiler
 *.psess
